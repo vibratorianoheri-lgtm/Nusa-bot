@@ -1,65 +1,56 @@
 import streamlit as st
-from langchain_google_genai import ChatGoogleGenerativeAI
-from langchain.chains import ConversationChain
-from langchain.memory import ConversationBufferMemory
-from langchain.prompts import PromptTemplate
+import google.generativeai as genai
 
-st.set_page_config(page_title="NusaBot - Travel Assistant", page_icon="🌴")
-st.title("🌴 NusaBot: AI Travel Guide Indonesia")
-st.caption("Solusi cerdas rencana liburanmu!")
+st.set_page_config(page_title="NusaBot Debug Version", page_icon="🌴")
+st.title("🌴 NusaBot: AI Travel Guide")
 
 with st.sidebar:
     st.header("⚙️ Konfigurasi")
-    api_key = st.text_input("Masukkan Google Gemini API Key:", type="password")
-    st.info("Dapatkan API Key di Google AI Studio.")
-
-if "memory" not in st.session_state:
-    st.session_state.memory = ConversationBufferMemory()
-
-if "messages" not in st.session_state:
-    st.session_state.messages = [
-        {"role": "assistant", "content": "Halo Kak! Aku NusaBot 🌴. Mau rencana liburan ke mana nih?"}
-    ]
-
-for msg in st.session_state.messages:
-    st.chat_message(msg["role"]).write(msg["content"])
-
-if prompt := st.chat_input("Tanya destinasi, kuliner, atau tips travel..."):
-    if not api_key:
-        st.warning("Silakan masukkan API Key terlebih dahulu di sidebar kiri!")
-        st.stop()
-
-    st.session_state.messages.append({"role": "user", "content": prompt})
-    st.chat_message("user").write(prompt)
-
-    template = """Kamu adalah NusaBot, asisten travel Indonesia yang ramah. 
-    Gunakan bahasa Indonesia yang santai. Jawablah hanya seputar pariwisata Indonesia.
+    api_key = st.text_input("Masukkan Google Gemini API Key:", type="password", key="api_input")
     
-    Riwayat Percakapan:
-    {history}
-    
-    User: {input}
-    NusaBot:"""
-    
-    prompt_template = PromptTemplate(input_variables=["history", "input"], template=template)
-    
+    if api_key:
+        st.success("API Key terdeteksi! Siap digunakan.")
+    else:
+        st.warning("Menunggu API Key...")
+
+if api_key:
     try:
-      llm = ChatGoogleGenerativeAI(
-            model="gemini-1.5-flash-latest", # <--- Gunakan nama lengkap ini
-            google_api_key=api_key,
-            temperature=0.7
-        )
+        genai.configure(api_key=api_key)
+        model = genai.GenerativeModel(
+    "models/gemini-2.5-flash-lite",
+    generation_config={
+        "max_output_tokens": 200
+    }
+)
         
-        conversation = ConversationChain(
-            prompt=prompt_template,
-            llm=llm,
-            memory=st.session_state.memory
-        )
-
-        with st.spinner("NusaBot sedang berpikir..."):
-            response = conversation.predict(input=prompt)
-            st.session_state.messages.append({"role": "assistant", "content": response})
-            st.chat_message("assistant").write(response)
+        if "chat" not in st.session_state:
+            st.session_state.chat = model.start_chat(history=[])
+            st.session_state.messages = []
+            st.session_state.messages.append({"role": "assistant", "content": "Halo! NusaBot sudah aktif. Mau tanya apa hari ini?"})
             
     except Exception as e:
-        st.error(f"Terjadi kesalahan teknis: {str(e)}")
+        st.error(f"Gagal koneksi ke Google: {e}")
+
+if "messages" in st.session_state:
+    for message in st.session_state.messages:
+        with st.chat_message(message["role"]):
+            st.markdown(message["content"])
+
+if prompt := st.chat_input("Ketik pesan di sini..."):
+    if not api_key:
+        st.error("Masukkan API Key di sidebar dulu ya!")
+    else:
+        st.session_state.messages.append({"role": "user", "content": prompt})
+        with st.chat_message("user"):
+            st.markdown(prompt)
+
+        try:
+            with st.spinner("Berpikir..."):
+                response = st.session_state.chat.send_message(prompt)
+                full_response = response.text
+                
+                st.session_state.messages.append({"role": "assistant", "content": full_response})
+                with st.chat_message("assistant"):
+                    st.markdown(full_response)
+        except Exception as e:
+            st.error(f"Waduh, ada error pas jawab: {e}")
