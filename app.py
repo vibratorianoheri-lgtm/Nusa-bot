@@ -44,11 +44,11 @@ if prompt := st.chat_input("Tanya destinasi, kuliner, atau tips travel..."):
     prompt_template = PromptTemplate(input_variables=["history", "input"], template=template)
     
     try:
-        llm = ChatGoogleGenerativeAI(
-    model="gemini-pro",
-    google_api_key=api_key,
-    temperature=0.7
-)
+      llm = ChatGoogleGenerativeAI(
+            model="gemini-1.5-flash-latest", # <--- Gunakan nama lengkap ini
+            google_api_key=api_key,
+            temperature=0.7
+        )
         
         conversation = ConversationChain(
             prompt=prompt_template,
