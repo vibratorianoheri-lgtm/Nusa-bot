@@ -45,10 +45,10 @@ if prompt := st.chat_input("Tanya destinasi, kuliner, atau tips travel..."):
     
     try:
         llm = ChatGoogleGenerativeAI(
-            model="gemini-1.5-pro", 
-            google_api_key=api_key,
-            temperature=0.7
-        )
+    model="gemini-pro",
+    google_api_key=api_key,
+    temperature=0.7
+)
         
         conversation = ConversationChain(
             prompt=prompt_template,
